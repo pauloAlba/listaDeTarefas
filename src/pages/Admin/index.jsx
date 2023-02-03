@@ -12,12 +12,15 @@ import {
   orderBy,
   where,
   doc,
-  deleteDoc
+  deleteDoc,
+  updateDoc
 } from "firebase/firestore";
+import { async } from "@firebase/util";
 
 export default function Admin() {
   const [tarefaInput, setTarefaInput] = useState("");
   const [user, setUser] = useState({});
+  const [edit, setEdit] = useState({});
 
   const [tarefas, setTarefas] = useState([]);
 
@@ -46,7 +49,7 @@ export default function Admin() {
             });
           });
 
-          console.log(lista)
+          console.log(lista);
           setTarefas(lista);
         });
       }
@@ -60,6 +63,11 @@ export default function Admin() {
 
     if (tarefaInput === "") {
       alert("Digite sua tarefa...");
+      return;
+    }
+
+    if (edit?.id) {
+      handleUpdateTarefa();
       return;
     }
 
@@ -81,9 +89,31 @@ export default function Admin() {
     await signOut(auth);
   }
 
-  async function deleteTarefa(id){
-    const docRef = doc(db, "tarefas", id)
-    await deleteDoc(docRef)
+  async function deleteTarefa(id) {
+    const docRef = doc(db, "tarefas", id);
+    await deleteDoc(docRef);
+  }
+
+  function editTarefa(item) {
+    setTarefaInput(item.tarefa);
+    setEdit(item);
+  }
+
+  async function handleUpdateTarefa() {
+    const docRef = doc(db, "tarefas", edit?.id)
+    await updateDoc(docRef, {
+      tarefa: tarefaInput
+    })
+    .then(()=>{
+      console.log("Tarefa atualizada")
+      setTarefaInput("")
+      setEdit({})
+    })
+    .catch((error)=>{
+      console.log("Erro ao atualizar" + error)
+      setTarefaInput("")
+      setEdit('')
+    })
   }
 
   return (
@@ -97,20 +127,35 @@ export default function Admin() {
           onChange={(e) => setTarefaInput(e.target.value)}
         />
 
-        <button className="btn-register" type="submit">
-          Registrar tarefa
-        </button>
+        {Object.keys(edit).length > 0 ? (
+          <button
+            className="btn-register"
+            style={{ backgroundColor: "#6add39" }}
+            type="submit"
+          >
+            Atualizar tarefa
+          </button>
+        ) : (
+          <button className="btn-register" type="submit">
+            Registrar tarefa
+          </button>
+        )}
       </form>
 
-      {tarefas.map((item)=> (
-         <article className="list" key={item.id}>
-         <p>{item.tarefa}</p>
- 
-         <div>
-           <button>Editar</button>
-           <button onClick={()=> deleteTarefa(item.id)} className="btn-delete">Concluir</button>
-         </div>
-       </article>
+      {tarefas.map((item) => (
+        <article className="list" key={item.id}>
+          <p>{item.tarefa}</p>
+
+          <div>
+            <button onClick={() => editTarefa(item)}>Editar</button>
+            <button
+              onClick={() => deleteTarefa(item.id)}
+              className="btn-delete"
+            >
+              Concluir
+            </button>
+          </div>
+        </article>
       ))}
 
       <button className="btn-logout" onClick={handleLogout}>
